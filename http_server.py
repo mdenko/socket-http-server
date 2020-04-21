@@ -20,20 +20,34 @@ def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
     """
 
     # TODO: Implement response_ok
-    return b""
+    return b"\r\n".join([
+        b"HTTP/1.1 200 OK",
+        b"Content-Type: " + mimetype,
+        b"",
+        body,
+    ])
 
 def response_method_not_allowed():
     """Returns a 405 Method Not Allowed response"""
 
     # TODO: Implement response_method_not_allowed
-    return b""
+
+    return b"\r\n".join([
+        b"HTTP/1.1 405 Method Not Allowed",
+        b"",
+        b"You can't do that on this server!"
+    ])
 
 
 def response_not_found():
     """Returns a 404 Not Found response"""
 
     # TODO: Implement response_not_found
-    return b""
+    return b"\r\n".join([
+        b"HTTP/1.1 404 Method Not Found",
+        b"",
+        b"We can't find your method!"
+    ])
 
 
 def parse_request(request):
@@ -45,7 +59,13 @@ def parse_request(request):
     """
 
     # TODO: implement parse_request
-    return ""
+    conn = http.client.HTTPConnection('localhost:10000')
+    if conn.request('GET', url):
+        response = conn.getresponse()
+        conn.close()
+        return response
+
+    return NotImplementedError
 
 def response_path(path):
     """
@@ -74,6 +94,11 @@ def response_path(path):
         response_path('/a_page_that_doesnt_exist.html') -> Raises a NameError
 
     """
+    try:
+        response_ok(path)
+
+    except NameError:
+        reponse_not_fount()
 
     # TODO: Raise a NameError if the requested content is not present
     # under webroot.
@@ -85,7 +110,9 @@ def response_path(path):
     # If the path is "make_time.py", then you may OPTIONALLY return the
     # result of executing `make_time.py`. But you need only return the
     # CONTENTS of `make_time.py`.
-    
+
+
+
     content = b"not implemented"
     mime_type = b"not implemented"
 
@@ -114,30 +141,42 @@ def server(log_buffer=sys.stderr):
 
                     if '\r\n\r\n' in request:
                         break
-		
+
 
                 print("Request received:\n{}\n\n".format(request))
 
                 # TODO: Use parse_request to retrieve the path from the request.
 
-                # TODO: Use response_path to retrieve the content and the mimetype,
-                # based on the request path.
+                try:
+                    path = parse_request(request)
 
-                # TODO; If parse_request raised a NotImplementedError, then let
-                # response be a method_not_allowed response. If response_path raised
-                # a NameError, then let response be a not_found response. Else,
-                # use the content and mimetype from response_path to build a 
-                # response_ok.
-                response = response_ok(
-                    body=b"Welcome to my web server",
-                    mimetype=b"text/plain"
-                )
+                    # TODO: Use response_path to retrieve the content and the mimetype,
+                    # based on the request path.
+
+                    # TODO; If parse_request raised a NotImplementedError, then let
+                    # response be a method_not_allowed response. If response_path raised
+                    # a NameError, then let response be a not_found response. Else,
+                    # use the content and mimetype from response_path to build a
+                    # response_ok.
+                    response = response_ok(
+                        body=b"Welcome to my web server",
+                        mimetype=b"text/plain"
+                    )
+                except NotImplementedError:
+                    response = response_method_not_allowed()
+
+                try:
+                    response_path(response)
+                except NameError:
+                    response = response_method_not_found()
 
                 conn.sendall(response)
+
+
             except:
                 traceback.print_exc()
             finally:
-                conn.close() 
+                conn.close()
 
     except KeyboardInterrupt:
         sock.close()
@@ -149,5 +188,3 @@ def server(log_buffer=sys.stderr):
 if __name__ == '__main__':
     server()
     sys.exit(0)
-
-
